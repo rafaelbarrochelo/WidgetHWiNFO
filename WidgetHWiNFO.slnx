@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WidgetHWiNFO.Core/WidgetHWiNFO.Core.csproj" />
+    <Project Path="src/WidgetHWiNFO/WidgetHWiNFO.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WidgetHWiNFO.Tests/WidgetHWiNFO.Tests.csproj" />
+  </Folder>
+</Solution>

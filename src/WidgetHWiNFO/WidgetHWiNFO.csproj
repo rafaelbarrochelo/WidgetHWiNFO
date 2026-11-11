@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Only for the native NotifyIcon (tray) and icon drawing; no third-party packages. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <RootNamespace>WidgetHWiNFO</RootNamespace>
+    <AssemblyName>WidgetHWiNFO</AssemblyName>
+    <Product>WidgetHWiNFO</Product>
+    <Description>Minimal tray monitor for HWiNFO sensors</Description>
+    <Version>0.1.0</Version>
+    <!-- Fluent theme (ThemeMode) is still flagged experimental in WPF. -->
+    <NoWarn>$(NoWarn);WPF0001;WFO0003</NoWarn>
+    <!-- Lean runtime footprint for an always-on tray app. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SatelliteResourceLanguages>en;pt-BR</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Avoid WinForms/WPF type name clashes (Application, Color, Brush, ...). -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WidgetHWiNFO.Core\WidgetHWiNFO.Core.csproj" />
+  </ItemGroup>
+
+</Project>
+
+

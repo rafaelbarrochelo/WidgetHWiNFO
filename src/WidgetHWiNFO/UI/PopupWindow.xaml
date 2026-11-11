@@ -1,0 +1,482 @@
+<Window x:Class="WidgetHWiNFO.UI.PopupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="clr-namespace:WidgetHWiNFO.UI.Controls"
+        xmlns:ui="clr-namespace:WidgetHWiNFO.UI"
+        x:ClassModifier="internal"
+        Title="WidgetHWiNFO"
+        Width="360"
+        SizeToContent="Height"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Background="Transparent"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        FontFamily="Segoe UI Variable Text, Segoe UI"
+        FontSize="12"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" GlassFrameThickness="-1" ResizeBorderThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <SolidColorBrush x:Key="CpuBrush" Color="#3B82F6" />
+        <SolidColorBrush x:Key="GpuBrush" Color="#A855F7" />
+        <SolidColorBrush x:Key="MemBrush" Color="#22C55E" />
+        <SolidColorBrush x:Key="DownBrush" Color="#06B6D4" />
+        <SolidColorBrush x:Key="UpBrush" Color="#F97316" />
+        <SolidColorBrush x:Key="TrackBrush" Color="#33808080" />
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="Caption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <Style x:Key="Value" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- Value colored by the Severity stored in Tag. -->
+        <Style x:Key="SeverityValue" TargetType="TextBlock" BasedOn="{StaticResource Value}">
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="{x:Static ui:Severity.Warning}">
+                    <Setter Property="Foreground" Value="#F59E0B" />
+                </Trigger>
+                <Trigger Property="Tag" Value="{x:Static ui:Severity.Critical}">
+                    <Setter Property="Foreground" Value="#EF4444" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="Transparent" CornerRadius="4">
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A small "caption over value" metric block. -->
+        <Style x:Key="Metric" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,8,6" />
+        </Style>
+
+        <SolidColorBrush x:Key="CacheBrush" Color="#3B82F6" />
+
+        <Style x:Key="SubTitle" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,10,0,3" />
+        </Style>
+
+        <DataTemplate x:Key="ProcessRow" DataType="{x:Type ui:ProcessItem}">
+            <DockPanel Margin="0,1">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Value}" FontSize="12" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Name}" Style="{StaticResource Caption}" FontSize="12" Margin="0,0,8,0" />
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- Text-only button used for "show/hide processes". -->
+        <Style x:Key="LinkButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="T" Text="{TemplateBinding Content}" FontSize="11" Foreground="{TemplateBinding Foreground}" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="T" Property="TextDecorations" Value="Underline" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LegendDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="7" />
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Margin" Value="0,0,5,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="Root" Padding="12,10,12,4">
+        <DockPanel>
+            <!-- Header -->
+            <DockPanel DockPanel.Dock="Top" Margin="2,0,0,8">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="{x:Static ui:Strings.Settings}" Click="OnSettingsClick" />
+                    <Button Style="{StaticResource IconButton}" Content="&#xE7E8;" ToolTip="{x:Static ui:Strings.Exit}" Click="OnExitClick" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Margin="0,1,8,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#F59E0B" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                        <Setter Property="Fill" Value="#22C55E" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding StatusText}" Style="{StaticResource Caption}" FontSize="12" />
+                </StackPanel>
+            </DockPanel>
+
+            <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+
+                    <!-- Problem -->
+                    <Border Style="{StaticResource Card}" Visibility="{Binding HasProblem, Converter={StaticResource BoolToVis}}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left" Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="18" Foreground="#F59E0B" Margin="0,2,10,0" VerticalAlignment="Top" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding ProblemTitle}" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Text="{Binding ProblemDetail}" Style="{StaticResource Caption}" FontSize="12"
+                                           TextWrapping="Wrap" TextTrimming="None" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Compact: one column (right panel goes below). Wide: two columns. See ApplyLayout(). -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition x:Name="SecondColumn" Width="0" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                    <!-- VerticalAlignment=Top so ActualHeight is the content height (used by BalanceColumns). -->
+                    <StackPanel x:Name="LeftPanel" VerticalAlignment="Top">
+
+                    <!-- CPU -->
+                    <Border x:Name="CpuCard" Style="{StaticResource Card}" Visibility="{Binding ShowCpu, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="{x:Static ui:Strings.Cpu}" Style="{StaticResource SectionTitle}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding CpuName}" Style="{StaticResource Caption}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                            </DockPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid Width="58" Height="58" Margin="0,0,14,0">
+                                    <c:RingGauge Value="{Binding CpuUsage}" Thickness="6" FillBrush="{StaticResource CpuBrush}" TrackBrush="{StaticResource TrackBrush}" />
+                                    <TextBlock Text="{Binding CpuUsageText}" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                                <UniformGrid Grid.Column="1" Columns="3" VerticalAlignment="Center">
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Temperature}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding CpuTemp}" Tag="{Binding CpuTempSeverity}" Style="{StaticResource SeverityValue}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Power}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding CpuPower}" Style="{StaticResource Value}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Clock}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding CpuClock}" Style="{StaticResource Value}" />
+                                    </StackPanel>
+                                </UniformGrid>
+                            </Grid>
+                            <c:ThreadBars Height="22" Margin="0,8,0,0" Values="{Binding ThreadUsage}"
+                                          BarBrush="{StaticResource CpuBrush}" TrackBrush="{StaticResource TrackBrush}"
+                                          ToolTip="{x:Static ui:Strings.Threads}" />
+                            <c:Sparkline Height="30" Margin="0,8,0,0" Maximum="100"
+                                         Source="{Binding Monitor.CpuUsage}" Version="{Binding HistoryVersion}" Stroke="{StaticResource CpuBrush}" />
+                            <StackPanel Visibility="{Binding ShowProcesses, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Visibility="{Binding HasCpuProcesses, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{x:Static ui:Strings.TopCpu}" Style="{StaticResource SubTitle}" />
+                                    <ItemsControl ItemsSource="{Binding TopCpu}" ItemTemplate="{StaticResource ProcessRow}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <Button Style="{StaticResource LinkButton}" Content="{Binding ProcessesToggleText}" Click="OnToggleProcesses" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- GPU -->
+                    <Border x:Name="GpuCard" Style="{StaticResource Card}" Visibility="{Binding ShowGpu, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="{x:Static ui:Strings.Gpu}" Style="{StaticResource SectionTitle}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding GpuName}" Style="{StaticResource Caption}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                            </DockPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid Width="58" Height="58" Margin="0,0,14,0" VerticalAlignment="Top">
+                                    <c:RingGauge Value="{Binding GpuUsage}" Thickness="6" FillBrush="{StaticResource GpuBrush}" TrackBrush="{StaticResource TrackBrush}" />
+                                    <TextBlock Text="{Binding GpuUsageText}" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                                <UniformGrid Grid.Column="1" Columns="3" VerticalAlignment="Center">
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Temperature}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding GpuTemp}" Tag="{Binding GpuTempSeverity}" Style="{StaticResource SeverityValue}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Power}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding GpuPower}" Style="{StaticResource Value}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Clock}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding GpuClock}" Style="{StaticResource Value}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.HotSpot}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding GpuHotSpot}" Style="{StaticResource Value}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Vram}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding GpuVram}" Style="{StaticResource Value}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Metric}">
+                                        <TextBlock Text="{x:Static ui:Strings.Fan}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding GpuFan}" Style="{StaticResource Value}" />
+                                    </StackPanel>
+                                </UniformGrid>
+                            </Grid>
+                            <c:Sparkline Height="30" Margin="0,8,0,0" Maximum="100"
+                                         Source="{Binding Monitor.GpuUsage}" Version="{Binding HistoryVersion}" Stroke="{StaticResource GpuBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Memory -->
+                    <Border x:Name="MemoryCard" Style="{StaticResource Card}" Visibility="{Binding ShowMemory, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding MemLoadText}" Style="{StaticResource Value}" />
+                                <TextBlock Text="{x:Static ui:Strings.Memory}" Style="{StaticResource SectionTitle}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding MemUsedText}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <!-- Detailed split (Windows API); falls back to a simple bar. -->
+                            <StackPanel Visibility="{Binding HasMemDetails, Converter={StaticResource BoolToVis}}" Margin="0,8,0,0">
+                                <c:SegmentBar Height="8" First="{Binding MemInUse}" Second="{Binding MemCached}" Third="{Binding MemFree}"
+                                              FirstBrush="{StaticResource MemBrush}" SecondBrush="{StaticResource CacheBrush}" ThirdBrush="{StaticResource TrackBrush}" />
+                                <UniformGrid Columns="3" Margin="0,6,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Style="{StaticResource LegendDot}" Fill="{StaticResource MemBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{x:Static ui:Strings.InUse}" Style="{StaticResource Caption}" />
+                                            <TextBlock Text="{Binding MemInUseText}" FontSize="12" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Style="{StaticResource LegendDot}" Fill="{StaticResource CacheBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{x:Static ui:Strings.Cached}" Style="{StaticResource Caption}" />
+                                            <TextBlock Text="{Binding MemCachedText}" FontSize="12" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Style="{StaticResource LegendDot}" Fill="{StaticResource TrackBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{x:Static ui:Strings.Free}" Style="{StaticResource Caption}" />
+                                            <TextBlock Text="{Binding MemFreeText}" FontSize="12" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <TextBlock Text="{Binding MemCommitText}" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                            </StackPanel>
+                            <ProgressBar Value="{Binding MemLoad, Mode=OneWay}" Maximum="100" Height="6" Margin="0,8,0,0"
+                                         Foreground="{StaticResource MemBrush}" Background="{StaticResource TrackBrush}" BorderThickness="0">
+                                <ProgressBar.Style>
+                                    <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasMemDetails}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ProgressBar.Style>
+                            </ProgressBar>
+                            <c:Sparkline Height="24" Margin="0,8,0,0" Maximum="100"
+                                         Source="{Binding Monitor.MemoryLoad}" Version="{Binding HistoryVersion}" Stroke="{StaticResource MemBrush}" />
+                            <StackPanel Visibility="{Binding ShowProcesses, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{x:Static ui:Strings.TopMemory}" Style="{StaticResource SubTitle}" />
+                                <ItemsControl ItemsSource="{Binding TopMemory}" ItemTemplate="{StaticResource ProcessRow}" />
+                            </StackPanel>
+                            <Button Style="{StaticResource LinkButton}" Content="{Binding ProcessesToggleText}" Click="OnToggleProcesses" />
+                        </StackPanel>
+                    </Border>
+
+                    </StackPanel>
+                    <StackPanel x:Name="RightPanel" Grid.Row="1" VerticalAlignment="Top">
+
+                    <!-- Disks -->
+                    <Border x:Name="DisksCard" Style="{StaticResource Card}" Visibility="{Binding ShowDisks, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="{x:Static ui:Strings.Disks}" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+                            <ItemsControl ItemsSource="{Binding Disks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type ui:DiskItem}">
+                                        <Grid Margin="0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource Value}" FontSize="12" />
+                                                    <TextBlock Text="{Binding Model}" Style="{StaticResource Caption}" Margin="6,0,0,0" MaxWidth="170" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                                <StackPanel Visibility="{Binding HasCapacity, Converter={StaticResource BoolToVis}}" Margin="0,4,12,0">
+                                                    <ProgressBar Value="{Binding UsedPercent, Mode=OneWay}" Maximum="100" Height="5"
+                                                                 Foreground="{StaticResource CpuBrush}" Background="{StaticResource TrackBrush}" BorderThickness="0" />
+                                                    <TextBlock Text="{Binding Capacity}" Style="{StaticResource Caption}" Margin="0,3,0,0" />
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="&#x2193;" Foreground="{StaticResource DownBrush}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding Read}" Style="{StaticResource Caption}" Margin="2,0,10,0" />
+                                                    <TextBlock Text="&#x2191;" Foreground="{StaticResource UpBrush}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding Write}" Style="{StaticResource Caption}" Margin="2,0,0,0" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Temp}" Tag="{Binding TempSeverity}" Style="{StaticResource SeverityValue}" FontSize="12" HorizontalAlignment="Right" />
+                                                <TextBlock Text="{Binding Life}" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Network -->
+                    <Border x:Name="NetworkCard" Style="{StaticResource Card}" Visibility="{Binding ShowNetwork, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="{x:Static ui:Strings.Network}" Style="{StaticResource SectionTitle}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding NetAdapter}" Style="{StaticResource Caption}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding NetAddress}" Style="{StaticResource Caption}" Margin="0,2,0,0" />
+
+                            <UniformGrid Columns="2" Margin="0,6,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#x2193;" Foreground="{StaticResource DownBrush}" FontWeight="Bold" FontSize="13" />
+                                    <TextBlock Text="{Binding NetDown}" Style="{StaticResource Value}" Margin="4,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#x2191;" Foreground="{StaticResource UpBrush}" FontWeight="Bold" FontSize="13" />
+                                    <TextBlock Text="{Binding NetUp}" Style="{StaticResource Value}" Margin="4,0,0,0" />
+                                </StackPanel>
+                            </UniformGrid>
+                            <c:Sparkline Height="30" Margin="0,8,0,0"
+                                         Source="{Binding Monitor.NetDown}" SecondarySource="{Binding Monitor.NetUp}"
+                                         Version="{Binding HistoryVersion}"
+                                         Stroke="{StaticResource DownBrush}" SecondaryStroke="{StaticResource UpBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Fans & board -->
+                    <Border x:Name="FansCard" Style="{StaticResource Card}" Visibility="{Binding ShowFans, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="{x:Static ui:Strings.FansAndBoard}" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+                            <ItemsControl ItemsSource="{Binding Fans}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="2" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type ui:LabelValueItem}">
+                                        <DockPanel Margin="0,2,12,2">
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Value}" Tag="{Binding Severity}" Style="{StaticResource SeverityValue}" FontSize="12" />
+                                            <TextBlock Text="{Binding Label}" Style="{StaticResource Caption}" FontSize="12" Margin="0,0,6,0" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- System (placed in the shorter column in wide mode; see BalanceColumns) -->
+                    <Border x:Name="SystemCard" Style="{StaticResource Card}" Visibility="{Binding ShowSystem, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="{x:Static ui:Strings.SystemSection}" Style="{StaticResource SectionTitle}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding OsName}" Style="{StaticResource Caption}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                            </DockPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="{x:Static ui:Strings.Motherboard}" Style="{StaticResource Caption}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding BoardName}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" />
+                            </DockPanel>
+                            <UniformGrid Columns="4">
+                                <StackPanel Style="{StaticResource Metric}">
+                                    <TextBlock Text="{x:Static ui:Strings.Uptime}" Style="{StaticResource Caption}" />
+                                    <TextBlock Text="{Binding Uptime}" Style="{StaticResource Value}" FontSize="12" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Metric}">
+                                    <TextBlock Text="{x:Static ui:Strings.ProcessesCount}" Style="{StaticResource Caption}" />
+                                    <TextBlock Text="{Binding ProcessCount}" Style="{StaticResource Value}" FontSize="12" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Metric}">
+                                    <TextBlock Text="{x:Static ui:Strings.Threads}" Style="{StaticResource Caption}" />
+                                    <TextBlock Text="{Binding ThreadCount}" Style="{StaticResource Value}" FontSize="12" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Metric}">
+                                    <TextBlock Text="{x:Static ui:Strings.Handles}" Style="{StaticResource Caption}" />
+                                    <TextBlock Text="{Binding HandleCount}" Style="{StaticResource Value}" FontSize="12" />
+                                </StackPanel>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</Window>
